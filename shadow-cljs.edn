@@ -1,0 +1,15 @@
+;; shadow-cljs configuration
+{:source-paths
+ ["src/dev"
+  "src/main"
+  "src/test"]
+
+ :dependencies
+ [[snow "0.4.9"]]
+
+ :builds
+ {:app {:target :browser
+        :modules {:main {:init-fn seon.app/main!}}
+        :devtools {:http-root "public"
+                   :after-load seon.app/main!
+                   :http-port 8080}}}}}
