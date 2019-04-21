@@ -4,11 +4,13 @@
             [snow.router :as router]
             [stylefy.core :as stylefy :refer [use-style]]
             [react-google-maps :refer [withGoogleMap withScriptjs GoogleMap Marker]]
-            ["react-google-maps/lib/components/places/SearchBox" :refer (SearchBox)]))
+            ["react-google-maps/lib/components/places/SearchBox" :refer (SearchBox)]
+
+            [seon.yelp :as y]))
 
 ;; google map constants
 
-(def google-map-key "AIzaSyBkRHn-q8G25pGqRQ980-DVTNBLBqsg1ho")
+(def google-map-key "")
 
 (def map-url (str "https://maps.googleapis.com/maps/api/js?v=3.exp&libraries=geometry,drawing,places&key=" google-map-key))
 
@@ -63,13 +65,13 @@
     bounds))
 
 
-;; handler called when we update place in the google map
-(rf/reg-event-db
+(rf/reg-event-fx
  ::init
- (fn [db _]
-   (assoc db ::center (:center map-defaults))))
+ (fn [{:keys [db]} _]
+   {:db (assoc db ::center (:center map-defaults))}))
 
 
+;; handler called when we update place in the google map
 (rf/reg-event-db
  ::update-places
  (fn [{bounds ::bounds :as db} [_ places]]
@@ -135,16 +137,18 @@
 
 
 (defn app []
-  (map-container))
+  [:div
+   [y/list-restaurants]
+   [map-container]])
 
 
 (defn main! []
   (enable-console-print!)
   (stylefy/init)
   (rf/clear-subscription-cache!)
+  (rf/dispatch-sync [::init])
   (r/render [app]
             (js/document.getElementById "app"))
-  (rf/dispatch [::init])
   (println "App started."))
 
 

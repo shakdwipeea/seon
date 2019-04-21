@@ -6,11 +6,18 @@
 
  :dependencies
  [[snow "0.4.9"]
-  [stylefy "1.12.0"]]
+  [stylefy "1.12.0"]
+  [re-graph "0.1.8"]
+  [vincit/venia "0.2.5"]]
 
  :builds
  {:app {:target :browser
         :modules {:main {:init-fn seon.app/main!}}
+        :dev {:compiler-options {:optimizations :none
+                                 :closure-defines      {"re_frame.trace.trace_enabled_QMARK_" true}
+                                 :preloads             [day8.re-frame-10x.preload]}}
         :devtools {:http-root "public"
                    :after-load seon.app/main!
-                   :http-port 8080}}}}}
+                   :preloads     [devtools.preload
+                                  day8.re-frame-10x.preload]
+                   :http-port 8080}}}}
