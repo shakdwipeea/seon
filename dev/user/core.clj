@@ -47,3 +47,5 @@
   (println "Compiling cljs")
   (server/start!)
   (shadow/dev :app))
+
+#_(shadow/stop-worker :app)

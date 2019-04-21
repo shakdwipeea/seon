@@ -31,5 +31,5 @@
                                      [:middleware ::comm/comm])
    ::handler (component/using (new-handler)
                               [::sente-endpoint :middleware])
-   ::api-server (component/using (new-immutant-web :port (system/get-port config ::http-port))
+   ::api-server (component/using (new-immutant-web :port (system/get-port config :http-port))
                                  [::handler])])

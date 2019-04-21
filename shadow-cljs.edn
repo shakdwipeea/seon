@@ -3,12 +3,12 @@
 
  :builds
  {:app {:target :browser
+        :output-dir "resources/public/js"
+        :asset-path "/js"
         :modules {:main {:init-fn seon.app/main!}}
         :dev {:compiler-options {:optimizations :none
                                  :closure-defines      {"re_frame.trace.trace_enabled_QMARK_" true}
                                  :preloads             [day8.re-frame-10x.preload]}}
-        :devtools {:http-root "public"
-                   :after-load seon.app/main!
+        :devtools {:after-load seon.app/main!
                    :preloads     [devtools.preload
-                                  day8.re-frame-10x.preload]
-                   :http-port 8080}}}}
+                                  day8.re-frame-10x.preload]}}}}
