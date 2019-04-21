@@ -5,6 +5,7 @@
             [snow.client :as client]
             [snow.env :as env]
             [venia.core :as v]
+            [re-frame.core :as rf]
             [compojure.core :refer [routes GET ANY]]
             [ring.util.http-response :as response]
             [ring.middleware.resource :refer [wrap-resource]]
@@ -34,6 +35,8 @@
             :name "viewport"}]
     [:style {:id "_stylefy-constant-styles_"}]
     [:style {:id "_stylefy-styles_"}]
+    [:link {:rel "stylesheet"
+            :href "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"}]
     [:title "seon"]]
    [:body {:data-csrf-token csrf-token}
     [:div {:id "app"}]
@@ -73,11 +76,14 @@
               {:headers (:headers yelp-config)
                :query-params (merge location
                                     {:term "restaurants"
-                                     :limit 5})}))
+                                     :limit 10})}))
 
-(defn request-handler [{:keys [event ?reply-fn ?data] :as ev-msg}]
+(defn request-handler [{:keys [event ?reply-fn data] :as ev-msg}]
+  (info "ever" event)
   (def d ev-msg)
-  (?reply-fn [:seon.yelp/set-restaurants (search-yelp ?data)]))
+  (if (nil? data)
+    (rf/dispatch (conj event ?reply-fn))
+    (?reply-fn [:seon.yelp/set-restaurants (search-yelp data)])))
 
 ;; ((:?reply-fn d) [:snow.comm.core/trigger (search-yelp (:data d))])
 
