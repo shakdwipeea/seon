@@ -23,7 +23,10 @@
                    :zoom 14})
 
 
+
 ;; some styling
+(def phone-width "414px")
+
 (def input-style  {:boxSizing "border-box"
                    :border "1px solid transparent"
                    :width "240px"
@@ -32,7 +35,8 @@
                    :padding "0 12px"
                    :boxShadow "0 4px 16px rgba(0, 0, 0, 0.3)"
                    :fontSize "14px"
-                   :textOverflow "ellipses"})
+                   :textOverflow "ellipses"
+                   ::stylefy/media {{:max-width phone-width} {:margin-top "70px"}}})
 
 ;; interop helpers
 
@@ -70,7 +74,8 @@
  (fn [{:keys [db]} _]
    {:db (assoc db
                ::center (:center map-defaults)
-               ::business nil)}))
+               ::business nil
+               ::show-map true)}))
 
 
 (defn location->coordinate [location]
@@ -127,56 +132,75 @@
 
 (rf/reg-sub ::markers (fn [db _] (gmaps-conversion (::markers db))))
 
+(rf/reg-sub ::show-map (fn [db _] (::show-map db)))
 
 (defn google-map []
   (r/with-let [!searchbox-ref (r/atom nil)
-               !gmap-ref (r/atom nil)]
-    [:> GoogleMap
-     {:ref (set-ref! !gmap-ref)
-      :center @(rf/subscribe [::center])
-      :defaultZoom (:zoom map-defaults)
-      :onClick (fn [event] (rf/dispatch [::y/search (location->coordinate (.-latLng event))]))
-      :onBoundsChanged (fn []
-                         (when-let [ref (some-> @!gmap-ref)]
-                           (rf/dispatch [::update-bounds
-                                         {::bounds (.getBounds ref)}])))}
-     [:> SearchBox {:ref #(reset! !searchbox-ref %)
-                    :bounds @(rf/subscribe [::bounds])
-                    :controlPosition js/google.maps.ControlPosition.TOP_CENTER
-                    :onPlacesChanged (fn []
-                                       (when-let [places (some-> @!searchbox-ref .getPlaces)]
-                                         (rf/dispatch [::update-places places])))}
-      [:input (use-style input-style
-                         {:type "text"
-                          :placeholder "search for stuff"})]
-      ]
+               !gmap-ref (r/atom nil)
+               show-map? (rf/subscribe [::show-map])]
+    
+    [:div
+     [:div (use-style {::stylefy/media {{:max-width phone-width}
+                                        (when-not (true? @show-map?)
+                                          {:display :none})}})
+      [:> GoogleMap
+       {:ref (set-ref! !gmap-ref)
+        :center @(rf/subscribe [::center])
+        :defaultZoom (:zoom map-defaults)
+        :onClick (fn [event] (rf/dispatch [::y/search (location->coordinate (.-latLng event))]))
+        :onBoundsChanged (fn []
+                           (when-let [ref (some-> @!gmap-ref)]
+                             (rf/dispatch [::update-bounds
+                                           {::bounds (.getBounds ref)}])))}
+       
+       (map-indexed (fn [i m]
+                      [:div {:key i}
+                       [:> Marker {:position m
+                                   :onClick (fn [_]
+                                              (aset js/location "href" (:url m)))
+                                   }]])
+                    @(rf/subscribe [::markers]))]]
      
-     (map-indexed (fn [i m]
-                    [:div {:key i}
-                     [:> Marker {:position m
-                                 :onClick (fn [_]
-                                            (aset js/location "href" (:url m)))
-                                 }]])
-                  @(rf/subscribe [::markers]))]))
+     [:div.search (use-style {:z-index 12})
+      [:> SearchBox {:ref #(reset! !searchbox-ref %)
+                     :bounds @(rf/subscribe [::bounds])
+                     :controlPosition js/google.maps.ControlPosition.TOP_CENTER
+                     :onPlacesChanged (fn []
+                                        (when-let [places (some-> @!searchbox-ref .getPlaces)]
+                                          (rf/dispatch [::update-places places])))}
+       [:input (use-style input-style
+                          {:type "text"
+                           :placeholder "search for stuff"})]]]]))
+
+(def map-style (use-style
+                (cond-> {:height "100%"}
+                  (false? @(rf/subscribe [::show-map])) (merge {:height "auto"}))))
 
 
 (defn map-container []
   [:div  [:> (withScriptjs (withGoogleMap 
                             (r/reactify-component google-map)))
           {:googleMapURL map-url
-           :loadingElement (r/as-element [:div (use-style {:height "100%"})])
-           :containerElement (r/as-element [:div (use-style {:height "100%"})])
-           :mapElement (r/as-element [:div (use-style {:height "100%"})])}]])
+           :loadingElement (r/as-element [:div map-style])
+           :containerElement (r/as-element [:div map-style])
+           :mapElement (r/as-element [:div map-style])}]])
 
 
 (defn app []
-  (r/with-let [b (rf/subscribe [::y/business])]
+  (r/with-let [b (rf/subscribe [::y/business])
+               show-map? (rf/subscribe [::show-map])]
     [:div (use-style {:display :flex
-                      :flex-direction :row})
+                      :flex-direction :row
+                      ::stylefy/media {{:max-width phone-width} {:flex-direction :column-reverse}}})
      [:div.yelp (use-style (if (nil?  @b)
                              {:display :none}
                              {:flex-basis "30%"
-                              :overflow :auto}))  [y/list-restaurants]]
+                              :overflow :auto
+                              ::stylefy/media {{:max-width phone-width}
+                                               (if (true? @show-map?)
+                                                 {:display :none}
+                                                 {:flex-basis "100%"})}}))
+      [y/list-restaurants]]
      [:div.map (use-style {:flex-grow 11}) [map-container]]
      [:button (use-style {:position :absolute
                           :right 0
