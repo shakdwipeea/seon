@@ -4,9 +4,7 @@
             [snow.env :refer [read-edn]]
             [taoensso.timbre :as timbre]
             [taoensso.timbre.appenders.core :as appenders]
-            [seon.proxy :refer [system-config]]
-            [cider.nrepl :refer [cider-nrepl-handler]]
-            [clojure.tools.nrepl.server :as nrepl]
+            [seon.server :refer [system-config]]
             [shadow.cljs.devtools.server :as server]
             [shadow.cljs.devtools.api :as shadow]))
 
@@ -36,7 +34,7 @@
 (defn -main [& args]
   (timbre/refer-timbre)
   (timbre/merge-config!
-   {:appenders {:spit (appenders/spit-appender {:fname "voidwalker.log"})}})
+   {:appenders {:spit (appenders/spit-appender {:fname "seon.log"})}})
   
   (repl/start-nrepl)
   (println "nrepl started")

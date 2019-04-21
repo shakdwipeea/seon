@@ -3,52 +3,25 @@
             [re-graph.core :as rg]
             [day8.re-frame.http-fx]
             [ajax.core :as ajax]
+            [snow.comm.core :as comm]
             [venia.core :as v]))
-
-(def api-key "")
-
-(def config {:http-url "https://api.yelp.com/v3/graphql"
-             :ws-reconnect-timeout nil
-             :http-parameters {:headers (str "Authorization: Bearer " api-key)}})
-
-(rf/dispatch-sync [::rg/init config])
-
-  (def query "{
-    search {
-        total
-        business {
-            name
-            url
-        }
-    }
-  }")
 
 (rf/reg-event-db
  ::set-restaurants
- (fn [db [_ {data :data :as payload}]]
-   (println "As")
-   (println payload)
-   (assoc db ::data data)))
+ (fn [db [_ [_ {:keys [businesses region] :as payload}]]]
+   (assoc db
+          ::business businesses
+          :seon.app/center (:center region)
+          :seon.app/markers  (map :coordinates businesses))))
 
 
 (rf/reg-event-fx             
- ::search-yelp            
- (fn [{:keys [db]} _]      
+ ::search
+ (fn [{:keys [db]} [_ location]]
    {:db   (assoc db :show-twirly true)
-    :http-xhrio {:method          :post
-                 :uri             (:http-url config)
-                 :timeout         8000
-                 :headers         {:Authorization (str "Bearer " api-key)
-                                   :Content-type "application/graph-ql"}
-                 :body          (v/graphql-query {:venia/queries
-                                                  [[:search {:term "burrito"
-                                                             :location "san francisco"
-                                                             :limit 5}
-                                                    [:total [:business [:name :url]]]]]})
-                 :response-format (ajax/json-response-format {:keywords? true})
-                 :on-success      [::set-restaurants]
-                 :on-failure      [::error]}}))
-
+    ::comm/request {:data [::comm/trigger location]
+                    :on-success      [::set-restaurants]
+                    :on-failure      [::error]}}))
 
 
 ;; (term: \"burrito\",
@@ -56,5 +29,4 @@
 ;;        limit: 5)
 
 (defn list-restaurants []
-  (rf/dispatch [::search-yelp])
   [:div "list"])
