@@ -10,17 +10,20 @@
 (rf/reg-event-db
  ::set-restaurants
  (fn [db [_ [_ {:keys [businesses region] :as payload}]]]
-   (def a (map js->clj businesses))
-   (println a)
    (assoc db
           ::business (map js->clj businesses)
           :seon.app/center (:center region)
-          :seon.app/markers  (map :coordinates businesses))))
+          :seon.app/markers  (map
+                              (fn [{:keys [coordinates url]}]
+                                (merge coordinates
+                                       {:url url}))
+                              businesses))))
 
 
 (rf/reg-event-fx             
  ::search
  (fn [{:keys [db]} [_ location]]
+   (println "searching for " location)
    {:db   (assoc db :show-twirly true)
     ::comm/request {:data [::comm/trigger location]
                     :on-success      [::set-restaurants]
@@ -34,9 +37,10 @@
    [:span (use-style {:padding-right "5px"})
     (str "(" rating ")")]
    (for [r (range 0 rating)]
-     [:span.fa.fa-star (use-style {:color :orange})])
+     [:span.fa.fa-star (use-style {:color :orange}
+                                  {:key r})])
    (for [d (range 0 (- 5 rating))]
-     [:span.fa.fa-star])
+     [:span.fa.fa-star {:key d}])
    [:span (use-style {:padding-left "5px"})
     (str "(" review_count ")")]])
 
@@ -47,9 +51,9 @@
                           location is_closed url] :as r}]
   [:a (use-style {:text-decoration :none
                   :color "#000"}
-                 {:href url})
-   [:div (use-style {:text-decoration "bold"}
-                    {:key name})
+                 {:href url
+                  :key name})
+   [:div (use-style {:text-decoration "bold"})
     [:div (use-style {:min-height "100px"
                       :display :flex
                       :flex-direction :row})
@@ -75,5 +79,6 @@
 
 (defn list-restaurants []
   [:div (use-style {:height "100%"})
-   (when-let [bs @(rf/subscribe [::business])]
-     (map restaurant bs))])
+   (if-let [bs (seq @(rf/subscribe [::business]))]
+     (doall (map restaurant bs))
+     "No restaurants found")])

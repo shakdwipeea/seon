@@ -20,14 +20,14 @@
 
 (def map-defaults {:center {:latitude 59.95
                             :longitude 30.33}
-                   :zoom 16})
+                   :zoom 14})
 
 
 ;; some styling
 (def input-style  {:boxSizing "border-box"
                    :border "1px solid transparent"
                    :width "240px"
-                   :height "32px"
+                   :height "40px"
                    :margin-top "20px"
                    :padding "0 12px"
                    :boxShadow "0 4px 16px rgba(0, 0, 0, 0.3)"
@@ -68,7 +68,9 @@
 (rf/reg-event-fx
  ::init
  (fn [{:keys [db]} _]
-   {:db (assoc db ::center (:center map-defaults))}))
+   {:db (assoc db
+               ::center (:center map-defaults)
+               ::business nil)}))
 
 
 (defn location->coordinate [location]
@@ -94,9 +96,25 @@
    (assoc db ::bounds bounds)))
 
 
+(defn get-current-location []
+  (when-not (nil? (.-geolocation js/navigator))
+    (-> js/navigator
+        .-geolocation
+        (.getCurrentPosition (fn [pos] (rf/dispatch
+                                       [::y/search {:latitude  (.. pos -coords -latitude)
+                                                    :longitude (.. pos -coords -longitude)}]))))))
+
+
+(rf/reg-event-db
+ ::current-location
+ (fn [db [_]]
+   (get-current-location)
+   db))
+
+
 (defn gmap-conversion [{:keys [latitude longitude] :as a}]
-  {:lat latitude
-   :lng longitude})
+  (merge a {:lat latitude
+            :lng longitude}))
 
 (defn gmaps-conversion [coordinates]
   (map gmap-conversion coordinates))
@@ -117,6 +135,7 @@
      {:ref (set-ref! !gmap-ref)
       :center @(rf/subscribe [::center])
       :defaultZoom (:zoom map-defaults)
+      :onClick (fn [event] (rf/dispatch [::y/search (location->coordinate (.-latLng event))]))
       :onBoundsChanged (fn []
                          (when-let [ref (some-> @!gmap-ref)]
                            (rf/dispatch [::update-bounds
@@ -129,10 +148,15 @@
                                          (rf/dispatch [::update-places places])))}
       [:input (use-style input-style
                          {:type "text"
-                          :placeholder "search for stuff"})]]
+                          :placeholder "search for stuff"})]
+      ]
+     
      (map-indexed (fn [i m]
                     [:div {:key i}
-                     [:> Marker {:position m}]])
+                     [:> Marker {:position m
+                                 :onClick (fn [_]
+                                            (aset js/location "href" (:url m)))
+                                 }]])
                   @(rf/subscribe [::markers]))]))
 
 
@@ -146,13 +170,23 @@
 
 
 (defn app []
-  [:div (use-style {:display :flex
-                    :flex-direction :row})
-   [:div.yelp (use-style (if (nil? @(rf/subscribe [::y/business]))
-                           {:display :none}
-                           {:flex-basis "40%"
-                            :overflow :auto}))   [y/list-restaurants]]
-   [:div.map (use-style {:flex-grow 11}) [map-container]]])
+  (r/with-let [b (rf/subscribe [::y/business])]
+    [:div (use-style {:display :flex
+                      :flex-direction :row})
+     [:div.yelp (use-style (if (nil?  @b)
+                             {:display :none}
+                             {:flex-basis "30%"
+                              :overflow :auto}))  [y/list-restaurants]]
+     [:div.map (use-style {:flex-grow 11}) [map-container]]
+     [:button (use-style {:position :absolute
+                          :right 0
+                          :margin-right "20%"
+                          :height "40px"
+                          :background-color "grey"
+                          :border "1px solid black"
+                          :top "30px"}
+                         {:on-click (fn [_] (rf/dispatch [::current-location]))})
+      "Use my location"]]))
 
 
 (defn main! []

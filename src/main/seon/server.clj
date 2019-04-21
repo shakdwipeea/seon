@@ -75,8 +75,7 @@
   (client/get (-> yelp-config :url (str "businesses/search"))
               {:headers (:headers yelp-config)
                :query-params (merge location
-                                    {:term "restaurants"
-                                     :limit 10})}))
+                                    {:categories "restaurants"})}))
 
 (defn request-handler [{:keys [event ?reply-fn data] :as ev-msg}]
   (info "ever" event)
