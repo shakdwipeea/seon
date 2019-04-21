@@ -1,14 +1,5 @@
 ;; shadow-cljs configuration
-{:source-paths
- ["src/dev"
-  "src/main"
-  "src/test"]
-
- :dependencies
- [[snow "0.4.9"]
-  [stylefy "1.12.0"]
-  [re-graph "0.1.8"]
-  [vincit/venia "0.2.5"]]
+{:deps true
 
  :builds
  {:app {:target :browser

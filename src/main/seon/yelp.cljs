@@ -8,7 +8,6 @@
 (def api-key "")
 
 (def config {:http-url "https://api.yelp.com/v3/graphql"
-             
              :ws-reconnect-timeout nil
              :http-parameters {:headers (str "Authorization: Bearer " api-key)}})
 
