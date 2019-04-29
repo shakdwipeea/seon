@@ -1,0 +1,24 @@
+* seon
+
+** Getting started
+
++ add yelp api key in the profiles.edn template
++ add google map api key in app.cljs
++ run dev script
+
+#+BEGIN_SRC sh
+clj -m user.core
+#+END_SRC
+
+** Connecting to repl
++ clj nrepl will be available at 9001
++ cljs nrepl port will be dynamic and will be printed in the stdout
++ In order to connect to cljs repl, connect to the shadow's nrepl server
+and run:
+
+#+BEGIN_SRC clojure
+(cemerick.piggieback/cljs-repl :app)
+#+END_SRC
+
++ In addition, re-frame-10x should already be setup when you load the 
+app in the browser
