@@ -36,11 +36,11 @@
   [:span  
    [:span (use-style {:padding-right "5px"})
     (str "(" rating ")")]
-   (for [r (range 0 rating)]
-     [:span.fa.fa-star (use-style {:color :orange}
-                                  {:key r})])
-   (for [d (range 0 (- 5 rating))]
-     [:span.fa.fa-star {:key d}])
+   (doall (for [r (range 0 rating)]
+             [:span.fa.fa-star (use-style {:color :orange}
+                                          {:key r})]))
+   (doall (for [d (range 0 (- 5 rating))]
+             [:span.fa.fa-star {:key d}]))
    [:span (use-style {:padding-left "5px"})
     (str "(" review_count ")")]])
 
@@ -79,6 +79,6 @@
 
 (defn list-restaurants []
   [:div (use-style {:height "100%"})
-   (if-let [bs (seq @(rf/subscribe [::business]))]
+   (if-let [bs  @(rf/subscribe [::business])]
      (doall (map restaurant bs))
      "No restaurants found")])

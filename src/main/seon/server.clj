@@ -78,7 +78,7 @@
                                     {:categories "restaurants"})}))
 
 (defn request-handler [{:keys [event ?reply-fn data] :as ev-msg}]
-  (info "ever" event)
+  (info "ever" event data)
   (def d ev-msg)
   (if (nil? data)
     (rf/dispatch (conj event ?reply-fn))

@@ -149,6 +149,7 @@
         :defaultZoom (:zoom map-defaults)
         :onClick (fn [event] (rf/dispatch [::y/search (location->coordinate (.-latLng event))]))
         :onBoundsChanged (fn []
+                           (println "bounds changed")
                            (when-let [ref (some-> @!gmap-ref)]
                              (rf/dispatch [::update-bounds
                                            {::bounds (.getBounds ref)}])))}
@@ -191,7 +192,9 @@
                show-map? (rf/subscribe [::show-map])]
     [:div (use-style {:display :flex
                       :flex-direction :row
-                      ::stylefy/media {{:max-width phone-width} {:flex-direction :column-reverse}}})
+                      :height "100%"
+                      ::stylefy/media {{:max-width phone-width}
+                                       {:flex-direction :column-reverse}}})
      [:div.yelp (use-style (if (nil?  @b)
                              {:display :none}
                              {:flex-basis "30%"
@@ -202,15 +205,8 @@
                                                  {:flex-basis "100%"})}}))
       [y/list-restaurants]]
      [:div.map (use-style {:flex-grow 11}) [map-container]]
-     [:button (use-style {:position :absolute
-                          :right 0
-                          :margin-right "20%"
-                          :height "40px"
-                          :background-color "grey"
-                          :border "1px solid black"
-                          :top "30px"}
-                         {:on-click (fn [_] (rf/dispatch [::current-location]))})
-      "Use my location"]]))
+     ;; [:button "Use my location"]
+     ]))
 
 
 (defn main! []
