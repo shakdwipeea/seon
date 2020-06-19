@@ -4,14 +4,16 @@
             [snow.router :as router]
             [snow.comm.core :as comm]
             [stylefy.core :as stylefy :refer [use-style]]
-            [react-google-maps :refer [withGoogleMap withScriptjs GoogleMap Marker]]
+            [react-google-maps :refer [withGoogleMap withScriptjs GoogleMap Marker
+                                       ]]
             ["react-google-maps/lib/components/places/SearchBox" :refer (SearchBox)]
+            ["react-google-maps/lib/components/addons/MarkerClusterer" :refer [MarkerClusterer]]
 
             [seon.yelp :as y]))
 
 ;; google map constants
 
-(def google-map-key "")
+(def google-map-key "o")
 
 (def map-url (str "https://maps.googleapis.com/maps/api/js?v=3.exp&libraries=geometry,drawing,places&key=" google-map-key))
 
@@ -85,20 +87,58 @@
 ;; handler called when we update place in the google map
 (rf/reg-event-fx
  ::update-places
- (fn [{{bounds ::bounds :as db} :db} [_ places]]
+ (fn [{{bounds ::bounds :as db} :db} [_ places map-ref]]
    (let [location (-> places first get-location)]
      (def location location)
      {:db (assoc db
                  ::places  places
                  ::bounds  (update-bounds db)
                  ::center  (location->coordinate location))
-      :dispatch [::y/search (location->coordinate location)]})))
+      :dispatch [::y/search {:location (location->coordinate location)
+                             :update-center? true
+                             :map-ref map-ref}]})))
 
 
 (rf/reg-event-db
+ ::update-timer
+ (fn [db [_ timer]]
+   (assoc db :timer timer)))
+
+(defn dispatch-with-delay [dispatch delay]
+  (.setTimeout js/window (fn [] (rf/dispatch dispatch)) delay))
+
+(rf/reg-fx :debounced-dispatch
+           (fn [{:keys [dispatch timeout timer]}]
+             (when-not (nil? timer)
+               (.clearTimeout js/window timer))
+             (rf/dispatch
+              [::update-timer (dispatch-with-delay dispatch timeout)])))
+
+(rf/reg-event-fx
  ::update-bounds
- (fn [db {:keys [::bounds]}]
-   (assoc db ::bounds bounds)))
+ (fn [{db :db} [_ {:keys [::bounds]}]]
+   (println "asas" )
+   {:db (assoc db
+               ::bounds bounds
+               ::center1 (location->coordinate (.getCenter bounds)))
+    :debounced-dispatch {:dispatch [::y/search {:location  (-> bounds
+                                                               .getCenter
+                                                               location->coordinate)
+                                                :update-center? false}]
+                         :timer (:timer db)
+                         :timeout 300}}))
+
+(rf/reg-event-fx
+ ::update-zoom-level
+ (fn [{{:keys [::bounds] :as db} :db} [_ {:keys [::zoom-level]}]]
+   (println "dispatch for " (.getCenter bounds))
+   {:db (assoc db ::zoom-level zoom-level)}))
+
+(rf/reg-event-fx
+ ::comm/connected
+ (fn [{db :db} _]
+   {:db db
+    ::comm/request {:data [::comm/trigger {:data {::a 12}}]}}))
 
 
 (defn get-current-location []
@@ -115,6 +155,15 @@
  (fn [db [_]]
    (get-current-location)
    db))
+
+(rf/reg-event-db ::update-center
+                 (fn [db [_ {new-center ::center}]]
+                   (println "new " new-center)
+                   (assoc db ::center (location->coordinate new-center))))
+
+;; (rf/reg-event-fx ::staggered-center-update
+;;                  (fn [{db :db} [_ {:keys [dispatch]}]]
+;;                    ))
 
 
 (defn gmap-conversion [{:keys [latitude longitude] :as a}]
@@ -145,30 +194,40 @@
                                           {:display :none})}})
       [:> GoogleMap
        {:ref (set-ref! !gmap-ref)
-        :center @(rf/subscribe [::center])
+        ;; :center @(rf/subscribe [::center])
+        :defaultCenter (gmap-conversion (:center map-defaults))
         :defaultZoom (:zoom map-defaults)
-        :onClick (fn [event] (rf/dispatch [::y/search (location->coordinate (.-latLng event))]))
+        :onClick (fn [event]
+                   (rf/dispatch [::y/search (location->coordinate (.-latLng event))]))
+        :onZoomChanged (fn [e]
+                         ;; (when-let [ref (some-> @!gmap-ref)]
+                         ;;   (rf/dispatch [::update-zoom {::zoom-level (.getZoom ref)}]))
+                         )
+        ;; :onCenterChanged (fn []
+        ;;                    (when-let [ref (some-> @!gmap-ref)]
+        ;;                      (rf/dispatch [::update-center {::center (-> ref .getCenter)}])))
         :onBoundsChanged (fn []
-                           (println "bounds changed")
                            (when-let [ref (some-> @!gmap-ref)]
-                             (rf/dispatch [::update-bounds
-                                           {::bounds (.getBounds ref)}])))}
-       
-       (map-indexed (fn [i m]
-                      [:div {:key i}
-                       [:> Marker {:position m
-                                   :onClick (fn [_]
-                                              (aset js/location "href" (:url m)))
-                                   }]])
-                    @(rf/subscribe [::markers]))]]
+                             (rf/dispatch [::update-bounds {::bounds (.getBounds ref)
+                                                            }])))}
+       [:> MarkerClusterer {:enableRetinaIcons true
+                            :grid-size 60}
+        (map-indexed (fn [i m]
+                       [:div {:key i}
+                        [:> Marker {:position m
+                                    :onClick (fn [_]
+                                               (aset js/location "href" (:url m)))
+                                    }]])
+                     @(rf/subscribe [::markers]))]]]
      
      [:div.search (use-style {:z-index 12})
       [:> SearchBox {:ref #(reset! !searchbox-ref %)
-                     :bounds @(rf/subscribe [::bounds])
+                     ;; :bounds @(rf/subscribe [::bounds])
                      :controlPosition js/google.maps.ControlPosition.TOP_CENTER
                      :onPlacesChanged (fn []
                                         (when-let [places (some-> @!searchbox-ref .getPlaces)]
-                                          (rf/dispatch [::update-places places])))}
+                                          (when-let [map-ref (some-> @!gmap-ref)]
+                                            (rf/dispatch [::update-places places map-ref]))))}
        [:input (use-style input-style
                           {:type "text"
                            :placeholder "search for stuff"})]]]]))
@@ -207,6 +266,7 @@
      [:div.map (use-style {:flex-grow 11}) [map-container]]
      ;; [:button "Use my location"]
      ]))
+
 
 
 (defn main! []

@@ -7,26 +7,35 @@
             [snow.comm.core :as comm]
             [venia.core :as v]))
 
+(defn gmap-conversion [{:keys [latitude longitude] :as a}]
+  (merge a {:lat latitude
+            :lng longitude}))
+
 (rf/reg-event-db
  ::set-restaurants
- (fn [db [_ [_ {:keys [businesses region] :as payload}]]]
-   (assoc db
-          ::business (map js->clj businesses)
-          :seon.app/center (:center region)
-          :seon.app/markers  (map
-                              (fn [{:keys [coordinates url]}]
-                                (merge coordinates
-                                       {:url url}))
-                              businesses))))
+ (fn [db [_ update-center? map-ref [_ {:keys [businesses region] :as payload}]]]
+   (println "ce" (:center region))
+   (if update-center?
+     (.panTo map-ref (clj->js (gmap-conversion (:center region)))))
+   (merge db
+          {::business (map js->clj businesses)
+           :seon.app/markers  (map
+                               (fn [{:keys [coordinates url]}]
+                                 (merge coordinates
+                                        {:url url}))
+                               businesses)}
+          (if update-center?
+            {:seon.app/center (:center region)}
+            {}))))
 
 
 (rf/reg-event-fx             
  ::search
- (fn [{:keys [db]} [_ location]]
+ (fn [{:keys [db]} [_ {:keys [location update-center? map-ref]}]]
    (println "searching for " location)
    {:db   (assoc db :show-twirly true)
     ::comm/request {:data [::comm/trigger location]
-                    :on-success      [::set-restaurants]
+                    :on-success      [::set-restaurants update-center? map-ref]
                     :on-failure      [::error]}}))
 
 

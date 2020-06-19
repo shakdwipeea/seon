@@ -1,2 +1,3 @@
 {:yelp-api-key ""
+ :gmap-api-key ""
  :http-port 8000}
