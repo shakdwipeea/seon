@@ -11,22 +11,22 @@
   (merge a {:lat latitude
             :lng longitude}))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  ::set-restaurants
- (fn [db [_ update-center? map-ref [_ {:keys [businesses region] :as payload}]]]
+ (fn [{db :db} [_ update-center? map-ref [_ {:keys [businesses region] :as payload}]]]
    (println "ce" (:center region))
    (if update-center?
      (.panTo map-ref (clj->js (gmap-conversion (:center region)))))
-   (merge db
-          {::business (map js->clj businesses)
-           :seon.app/markers  (map
-                               (fn [{:keys [coordinates url]}]
-                                 (merge coordinates
-                                        {:url url}))
-                               businesses)}
-          (if update-center?
-            {:seon.app/center (:center region)}
-            {}))))
+   (let [markers (map (fn [{:keys [coordinates url]}]
+                        (merge coordinates {:url url}))
+                      businesses)]
+     {:db (merge db
+                 {::business (map js->clj businesses)
+                  :seon.app/markers markers}
+                 (if update-center?
+                   {:seon.app/center (:center region)}
+                   {}))
+      :dispatch [:seon.app/cluster markers]})))
 
 
 (rf/reg-event-fx             

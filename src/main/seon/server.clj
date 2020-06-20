@@ -60,31 +60,31 @@
    (ANY "*" req (serve-page req))))
 
 
-(def loc {:longitude 2.3522218999999955, :latitude 48.856610015777505})
+;; (def loc {:longitude 2.3522218999999955, :latitude 48.856610015777505})
 
 
-(def places (search-yelp loc))
+;; (def places (search-yelp loc))
 
-(def center (:center (:region places)))
+;; (def center (:center (:region places)))
 
-(def locs (map :coordinates (map #(select-keys % [:coordinates]) (:businesses places))))
+;; (def locs (map :coordinates (map #(select-keys % [:coordinates]) (:businesses places))))
 
-(defn degree->radian [deg]  (* deg (/ Math/PI 180)))
+;; (defn degree->radian [deg]  (* deg (/ Math/PI 180)))
 
-(defn distance [{lat1 :latitude lng1 :longitude} {lat2 :latitude lng2 :longitude}]
-  (let [radius 6371
-        dlat (degree->radian (- lat2 lat1))
-        dlon (degree->radian (- lng2 lng1))
-        a (+ (* (Math/sin (/ dlat 2))
-                (Math/sin (/ dlat 2)))
-             (* (Math/cos (degree->radian lat1))
-                (Math/cos (degree->radian lat2))
-                (Math/sin (/ dlon 2))
-                (Math/sin (/ dlon 2))))
-        c (* 2 (Math/atan2 (Math/sqrt a) (Math/sqrt (- 1 a))))]
-    (* radius c)))
+;; (defn distance [{lat1 :latitude lng1 :longitude} {lat2 :latitude lng2 :longitude}]
+;;   (let [radius 6371
+;;         dlat (degree->radian (- lat2 lat1))
+;;         dlon (degree->radian (- lng2 lng1))
+;;         a (+ (* (Math/sin (/ dlat 2))
+;;                 (Math/sin (/ dlat 2)))
+;;              (* (Math/cos (degree->radian lat1))
+;;                 (Math/cos (degree->radian lat2))
+;;                 (Math/sin (/ dlon 2))
+;;                 (Math/sin (/ dlon 2))))
+;;         c (* 2 (Math/atan2 (Math/sqrt a) (Math/sqrt (- 1 a))))]
+;;     (* radius c)))
 
-(map (partial distance center) locs)
+;; (map (partial distance center) locs)
 
 ;;;;;;;;;;;;;;;;
 ;; yelp-proxy ;;
